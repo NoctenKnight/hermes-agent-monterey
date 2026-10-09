@@ -1,0 +1,74 @@
+diff --git a/package-lock.json b/package-lock.json
+index cb5bd1433f..99b44a7eea 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -30,7 +30,7 @@
+         "typescript-eslint": "8.64.0"
+       },
+       "engines": {
+-        "node": "^22.22.0 || ^24.11.0 || >=26.0.0",
++        "node": "^20.19.0 || ^22.22.0 || ^24.11.0 || >=26.0.0",
+         "npm": "<11.10.0 || >=11.17.0"
+       }
+     },
+diff --git a/package.json b/package.json
+index 92b4b497de..6d7873e24e 100644
+--- a/package.json
++++ b/package.json
+@@ -64,7 +64,7 @@
+     "tar": "7.5.22"
+   },
+   "engines": {
+-    "node": "^22.22.0 || ^24.11.0 || >=26.0.0",
++    "node": "^20.19.0 || ^22.22.0 || ^24.11.0 || >=26.0.0",
+     "npm": "<11.10.0 || >=11.17.0"
+   },
+   "allowScripts": {
+diff --git a/pm/lock.json b/pm/lock.json
+index 800fdda389..2bc22bd31d 100644
+--- a/pm/lock.json
++++ b/pm/lock.json
+@@ -475,8 +475,8 @@
+           "url": "https://nodejs.org/dist/v26.7.0/node-v26.7.0-darwin-arm64.tar.xz"
+         },
+         "darwin-x64": {
+-          "sha256": "bd19c6b98d923fb049f64b547163b9f7d52ae73f16fdee09ecef9ab248c4d6ff",
+-          "url": "https://nodejs.org/dist/v26.7.0/node-v26.7.0-darwin-x64.tar.xz"
++          "sha256": "d0f34126b41532719035fdb3484d5c4210f18cd2489d6098dcc57802dfb80a71",
++          "url": "https://nodejs.org/dist/v20.19.0/node-v20.19.0-darwin-x64.tar.xz"
+         },
+         "linux-arm64": {
+           "sha256": "afc7a004018485092ac8985b817b0d5684472bd9472e0b57d2ab88737e50090d",
+diff --git a/pm/update.py b/pm/update.py
+index 86de317fee..f7f2dc9e60 100644
+--- a/pm/update.py
++++ b/pm/update.py
+@@ -366,6 +366,11 @@ def node_latest_versions() -> list[str]:
+         if v.startswith("v"):
+             v = v[1:]
+         if re.fullmatch(r"\d+\.\d+\.\d+", v):
++            # LOCAL PATCH for macOS 12 Monterey: Node 22+ links a newer
++            # libc++ (__libcpp_verbose_abort) than Monterey ships, so the
++            # staged binary fails verification. Cap at the Node 20.x line.
++            if int(v.split(".")[0]) > 20:
++                continue
+             out.append(v)
+     return out
+ 
+diff --git a/scripts/build/node-deps.mjs b/scripts/build/node-deps.mjs
+index df2bbd9ade..ca3ba155b0 100644
+--- a/scripts/build/node-deps.mjs
++++ b/scripts/build/node-deps.mjs
+@@ -114,7 +114,11 @@ export function prepareNodeDependencies({ source, workspaces, env = process.env,
+     const range = manifest.engines?.[name]
+     if (range && !satisfies(version, range)) throw new Error(`${name} ${version} violates ${range}`)
+   }
+-  const args = ['ci', '--no-audit', '--no-fund', '--engine-strict', '--include=dev',
++  // Monterey port: engines are relaxed for Node 20 in package.json, but the
++  // repo .npmrc forces engine-strict and this hardcoded flag would beat the
++  // npm_config_engine_strict=false escape hatch (CLI beats env). Install
++  // without the strict flag so engines stay advisory on this host.
++  const args = ['ci', '--no-audit', '--no-fund', '--include=dev',
+     '--include=optional', '--include-workspace-root=true',
+     ...selected.flatMap(workspace => ['--workspace', workspace]),
+   ]
