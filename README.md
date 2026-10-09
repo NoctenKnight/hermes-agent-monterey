@@ -65,7 +65,7 @@ Prerequisites: Xcode CLT (`xcode-select --install`), git, curl, ~30 GB free.
 
 ```bash
 # 0. Get this kit (pick one):
-git clone https://github.com/YOURUSER/hermes-monterey.git ~/hermes-monterey
+git clone https://github.com/NoctenKnight/hermes-agent-monterey.git ~/hermes-monterey
 #   — or —
 tar -xzf hermes-monterey.tar.gz -C ~/
 
