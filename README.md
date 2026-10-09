@@ -12,16 +12,14 @@ system Python 3.9.6 (too old — the installer brings its own).
 
 ## Version inventory (verified working)
 
-| Piece | Version | Why this one |
-|---|---|---|
-| Ollama | 0.34.0 (`Ollama-darwin.zip`, GitHub release) | 0.40.x needs macOS 14+; 0.34 is the newest that serves on Monterey |
-| Ollama models | `tinyllama` 637 MB · `nous-hermes` 3.8 GB · `llama3.1:8b` 4.9 GB | Hermes hard-requires ≥64K context → `llama3.1` (128K native) with `OLLAMA_CONTEXT_LENGTH=65536` |
-| Hermes Agent | v0.21.6+302 (`main`, Intel checkout) | — |
-| Node for Hermes | **v20.19.0** (darwin-x64) + npm 10.8.2 | Last line that runs on Monterey; v22+ needs macOS 13.5+ `libc++` (`__libcpp_verbose_abort`) |
-| Python for Hermes | 3.14.7 (astral standalone, via pm) | pm itself requires `>=3.14,<3.15` |
-| Rust | **1.99.0** via rustup (`~/.cargo`) | Builds `cryptography` 50.0.1 from source (no cp314/Intel wheel on PyPI — only `macosx_11_0_arm64`) |
-| OpenSSL | **3.5.4**, built from source to `~/.local/openssl` (`./Configure --prefix=$HOME/.local/openssl no-tests && make && make install`) | The `cryptography` Rust build fails with “Could not find directory of OpenSSL installation” without it |
-| uv | 0.12.3 | Pinned by the Hermes installer |
+- **Ollama 0.34.0** (`Ollama-darwin.zip`, GitHub release) — 0.40.x needs macOS 14+; 0.34 is the newest that serves on Monterey.
+- **Ollama models** — `tinyllama` 637 MB · `nous-hermes` 3.8 GB · `llama3.1:8b` 4.9 GB. Hermes hard-requires ≥64K context → `llama3.1` (128K native) with `OLLAMA_CONTEXT_LENGTH=65536`.
+- **Hermes Agent v0.21.6+302** (`main`, Intel checkout).
+- **Node v20.19.0** (darwin-x64) + npm 10.8.2 — last line that runs on Monterey; v22+ needs macOS 13.5+ `libc++` (`__libcpp_verbose_abort`).
+- **Python 3.14.7** (astral standalone, via pm) — pm itself requires `>=3.14,<3.15`.
+- **Rust 1.99.0** via rustup (`~/.cargo`) — builds `cryptography` 50.0.1 from source (no cp314/Intel wheel on PyPI — only `macosx_11_0_arm64`).
+- **OpenSSL 3.5.4**, built from source to `~/.local/openssl` (`./Configure --prefix=$HOME/.local/openssl no-tests && make && make install`) — without it, the `cryptography` Rust build fails with “Could not find directory of OpenSSL installation”.
+- **uv 0.12.3** — pinned by the Hermes installer.
 
 ## What was done (record, in order)
 
@@ -137,23 +135,21 @@ Automatic help already wired:
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `dyld: Symbol not found (__libcpp_verbose_abort)` for `node` | Node 22+ on macOS 12 | Repin to Node v20.19.0 (`repin.py`); never newer on Monterey |
-| `✗ node: staged entry failed verification` during install | Same as above (pm probing the binary) | Same fix |
-| `Error: node 20.19.0 violates ^22…` from `node-deps.mjs` / TUI won't start | Root `engines` gate | `repin.py` relaxes root `package.json` + `package-lock.json`; needs `npm_config_engine_strict=false` too (repo `.npmrc` forces strict; CLI flag in script beats env, hence the `.mjs` patch) |
-| `npm error code EACCES` / weird exit -13, 243 | `~/.npm` owned by root (e.g. from an old sudo run — check with `ls -ld ~/.npm`) | `npm_config_cache=$HOME/.npm-user` (in `.zshrc`); don't `chown` without need |
-| `cryptography` build: “Could not find directory of OpenSSL installation” | No system OpenSSL dev files on macOS | Build OpenSSL 3.5.4 to `~/.local`, export `OPENSSL_DIR` + `PKG_CONFIG_PATH` (persisted in `.zshrc`) |
-| `cryptography` still fails to link | Missing Rust or stale env in current shell | Install rustup stable, `source ~/.zshrc`, re-run `reinstall.sh` |
-| `context window 4,096 below minimum 64,000` | Small-context local model | `OLLAMA_CONTEXT_LENGTH=65536 ollama serve` + 64K-native model (`llama3.1:8b`); 7B-class non-GQA models need tens of GB of RAM for a 64K KV cache — prefer GQA models (Qwen/Llama-3) |
-| `HTTP 429` on OpenRouter free model | Per-model free-tier rate limits (key itself was valid) | Wait a minute or switch free model (`nemotron-3-super-120b-a12b:free` worked); `hermes fallback add` for a backup |
-| Requests still hit localhost after switching provider | Stale `model.base_url` outranks provider | `hermes config unset model.base_url` (Hermes warns about this itself) |
-| `hermes: command not found` | `~/.local/bin` not on PATH (installer skips rc edit non-interactively) | The `case ":$PATH:"…` line in `.zshrc` above; open a new terminal |
-| `install.sh` says “local changes stashed” | Installer autostash (by design) | Finish the install, then `repin.py` + `reinstall.sh`; or commit to your branch and rebase |
-| TUI exits instantly / blank in headless shell | Ink needs a real TTY | Run `hermes --tui` in a normal terminal; not a port bug |
-| `git diff` on `pm/lock.json` explodes to 1300 lines | `json.dump` with wrong indent | File uses 2-space indent + trailing `\n` — `repin.py` preserves both |
-| First chat takes ~9 min, then faster | 8B model on CPU + ~11K-token agent system prompt | Expected on Intel; keep model loaded, or use a cloud model for interactive work |
-| GPU questions | Ollama x86 is CPU-only upstream; older/integrated Mac GPUs can't hold multi-GB models and lack modern Metal | No GPU path on Intel Macs — CPU or cloud |
+- **`dyld: Symbol not found (__libcpp_verbose_abort)` for `node`** — Node 22+ on macOS 12. Repin to Node v20.19.0 (`repin.py`); never newer on Monterey.
+- **`✗ node: staged entry failed verification` during install** — same as above (pm probing the binary). Same fix.
+- **`Error: node 20.19.0 violates ^22…` from `node-deps.mjs` / TUI won't start** — root `engines` gate. `repin.py` relaxes root `package.json` + `package-lock.json`; needs `npm_config_engine_strict=false` too (repo `.npmrc` forces strict; CLI flag in script beats env, hence the `.mjs` patch).
+- **`npm error code EACCES` / weird exit -13, 243** — `~/.npm` owned by root (e.g. from an old sudo run — check with `ls -ld ~/.npm`). Fix: `npm_config_cache=$HOME/.npm-user` (in `.zshrc`); don't `chown` without need.
+- **`cryptography` build: “Could not find directory of OpenSSL installation”** — no system OpenSSL dev files on macOS. Fix: build OpenSSL 3.5.4 to `~/.local`, export `OPENSSL_DIR` + `PKG_CONFIG_PATH` (persisted in `.zshrc`).
+- **`cryptography` still fails to link** — missing Rust or stale env in current shell. Fix: install rustup stable, `source ~/.zshrc`, re-run `reinstall.sh`.
+- **`context window 4,096 below minimum 64,000`** — small-context local model. Fix: `OLLAMA_CONTEXT_LENGTH=65536 ollama serve` + 64K-native model (`llama3.1:8b`); 7B-class non-GQA models need tens of GB of RAM for a 64K KV cache — prefer GQA models (Qwen/Llama-3).
+- **`HTTP 429` on OpenRouter free model** — per-model free-tier rate limits (key itself was valid). Fix: wait a minute or switch free model (`nemotron-3-super-120b-a12b:free` worked); `hermes fallback add` for a backup.
+- **Requests still hit localhost after switching provider** — stale `model.base_url` outranks provider. Fix: `hermes config unset model.base_url` (Hermes warns about this itself).
+- **`hermes: command not found`** — `~/.local/bin` not on PATH (installer skips rc edit non-interactively). Fix: the `case ":$PATH:"…` line in `.zshrc` above; open a new terminal.
+- **`install.sh` says “local changes stashed”** — installer autostash (by design). Fix: finish the install, then `repin.py` + `reinstall.sh`; or commit to your branch and rebase.
+- **TUI exits instantly / blank in headless shell** — Ink needs a real TTY. Fix: run `hermes --tui` in a normal terminal; not a port bug.
+- **`git diff` on `pm/lock.json` explodes to 1300 lines** — `json.dump` with wrong indent. Fix: file uses 2-space indent + trailing `\n` — `repin.py` preserves both.
+- **First chat takes ~9 min, then faster** — 8B model on CPU + ~11K-token agent system prompt. Fix: expected on Intel; keep model loaded, or use a cloud model for interactive work.
+- **GPU questions** — Ollama x86 is CPU-only upstream; older/integrated Mac GPUs can't hold multi-GB models and lack modern Metal. Fix: no GPU path on Intel Macs — CPU or cloud.
 
 ## Known limitations
 
