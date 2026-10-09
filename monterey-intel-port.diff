@@ -1,3 +1,33 @@
+commit ce0480dddee590b6c84c9da5abe7ed8c62ccf895
+Author: nocten <kartikchandra804@gmail.com>
+Date:   Fri Oct 9 22:20:15 2026 +0530
+
+    Port to macOS 12 Monterey (Intel): Node 20 toolchain
+    
+    Run the agent on Monterey x86_64 where upstream requires macOS 14+.
+    Only tool-chain pins change; no runtime behavior changes on other platforms.
+    
+    - pm/update.py: cap Node lookup at major <= 20 (22+ needs newer libc++)
+    - pm/lock.json: pin darwin-x64 Node to v20.19.0 (other targets untouched)
+    - package.json, package-lock.json: allow ^20.19.0 in root engines
+    - scripts/build/node-deps.mjs: drop hardcoded --engine-strict so the
+      npm_config_engine_strict=false escape hatch works (.npmrc forces strict)
+    - .gitattributes: merge driver keeps the darwin-x64 pin across rebases
+    
+    Original work (c) Nous Research, MIT. Port modifications by nocten.
+
+diff --git a/.gitattributes b/.gitattributes
+index cb07900351..71758a45cb 100644
+--- a/.gitattributes
++++ b/.gitattributes
+@@ -35,3 +35,7 @@ docker/entrypoint.sh text eol=lf
+ *.html  text eol=lf
+ *.svg   text eol=lf
+ *.ps1   text eol=crlf
++# Monterey port: auto-keep the darwin-x64 Node v20 pin when pm/lock.json
++# conflicts on rebase/merge. Requires the driver (per clone, not committable):
++#   sh ~/hermes-monterey/setup-driver.sh
++pm/lock.json merge=hermes-pmlock
 diff --git a/package-lock.json b/package-lock.json
 index cb5bd1433f..99b44a7eea 100644
 --- a/package-lock.json

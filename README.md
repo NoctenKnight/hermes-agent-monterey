@@ -5,7 +5,8 @@ This kit records how it was made to work on an **Intel Mac running macOS 12.7.6*
 and how to keep it working across updates. Nothing here needs `sudo`;
 everything lives in `$HOME`.
 
-Machine this was built on: Monterey 12.7.6, x86_64,
+Machine this was built on: Monterey 12.7.6, x86_64, 32 GB RAM,
+AMD Radeon R9 M380 2 GB (unusable for inference — CPU-only),
 Xcode CLT 14 (clang 14, `xcode-select -p` → `/Library/Developer/CommandLineTools`),
 system Python 3.9.6 (too old — the installer brings its own).
 
@@ -36,7 +37,7 @@ system Python 3.9.6 (too old — the installer brings its own).
 4. **Patch 2 — `pm/lock.json`:** pin ONLY `darwin-x64` Node to v20.19.0 (+sha256);
    all 8 other targets stay at upstream v26. (Lock edits must preserve the file's
    2-space indent + trailing newline, or the diff explodes — learned the hard way.)
-5. **Rust + OpenSSL** (table above), exported via `~/.zshrc` (see profile block below).
+5. **Rust + OpenSSL** (table above), exported via `~/.zshrc` (step 1 below).
 6. **Context fix.** Hermes rejects models under 64K context (`nous-hermes` = 4K).
    Serve with `OLLAMA_CONTEXT_LENGTH=65536`, use `llama3.1:8b` (KV cache ≈ 8.6 GB +
    4.9 GB weights ≈ 14 GB loaded — fits 32 GB RAM). First chat answered correctly
@@ -64,10 +65,8 @@ system Python 3.9.6 (too old — the installer brings its own).
 Prerequisites: Xcode CLT (`xcode-select --install`), git, curl, ~30 GB free.
 
 ```bash
-# 0. Get this kit (pick one):
+# 0. Get this kit:
 git clone https://github.com/NoctenKnight/hermes-agent-monterey.git ~/hermes-monterey
-#   — or —
-tar -xzf hermes-monterey.tar.gz -C ~/
 
 # 1. Toolchain env (persist it):
 cat >> ~/.zshrc <<'EOF'
@@ -90,9 +89,10 @@ source ~/.zshrc
 #    OLLAMA_CONTEXT_LENGTH=65536 ollama serve  (keep running; GUI app lacks the setting)
 #    ollama pull llama3.1
 
-# 4. Hermes + this kit's patches:
+# 4. Hermes + this kit's patches (plain sh: zsh has no process substitution):
 git clone https://github.com/NousResearch/hermes-agent.git ~/.hermes/hermes-agent
-bash <(curl -fsSL https://hermes-agent.nousresearch.com/install.sh) \
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/hermes-install.sh
+bash /tmp/hermes-install.sh \
   --non-interactive --skip-browser --skip-computer-use   # fails at Node: expected
 python3 ~/hermes-monterey/repin.py                        # apply the 5 patches
 sh ~/hermes-monterey/reinstall.sh                         # tools + venv + JS deps
@@ -116,7 +116,7 @@ opt-in), so this is only for manual updates. The installer stashes local changes
 cd ~/.hermes/hermes-agent
 hermes update                                   # or re-run install.sh
 git checkout origin/main -- pm/lock.json package.json package-lock.json \
-  pm/update.py scripts/build/node-deps.mjs     # accept upstream wholesale…
+  pm/update.py scripts/build/node-deps.mjs .gitattributes  # accept upstream…
 python3 ~/hermes-monterey/repin.py              # …re-pin by key (immune to version bumps)
 sh ~/hermes-monterey/reinstall.sh               # re-sync tools
 ```
@@ -163,12 +163,13 @@ Automatic help already wired:
 - `hermes update` / re-running `install.sh` wipes repo patches (autostash) — use the
   reapply flow above, never `git stash pop` blindly onto a moved main.
 - API keys live in `~/.hermes/.env` (600), outside the repo — safe to commit the
-  5 patched files; never commit `.env`.
+  6 patched files; never commit `.env`.
 - Upstream may one day require Node 22+ *APIs* (not just the version gate) or
   Python 3.15-only syntax — then this port needs real code work, not pins.
 
 ## Files in this kit
 - `README.md` — this file
+- `LICENSE` — MIT (port © 2026 nocten; upstream excerpts © 2025 Nous Research)
 - `repin.py` — idempotent, key-based patch applier (`--check` for verify-only)
 - `reinstall.sh` — repin + pm tools + JS deps + doctor hint (one shot)
 - `merge-driver.sh` / `setup-driver.sh` — auto-keep the Node pin across rebases
