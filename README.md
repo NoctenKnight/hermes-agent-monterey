@@ -47,8 +47,8 @@ everything lives in `$HOME`.
    patched root `package.json` + root `package-lock.json` `packages[""]` entry to
    allow `^20.19.0`, dropped the hardcoded `--engine-strict` (it beats the
    `npm_config_engine_strict=false` escape hatch; repo `.npmrc` forces strict).
-   Also required: `npm_config_cache=$HOME/.npm-user` (system `~/.npm` is
-   root-owned from an old sudo run → EACCES). Official flow then exits 0
+   Also required: `npm_config_cache=$HOME/.npm-user` (needed if `~/.npm` is
+   root-owned, e.g. from an old sudo run → EACCES; check with `ls -ld ~/.npm`). Official flow then exits 0
    (555 packages, receipt written); `hermes --tui` launches in a real terminal
    (no TTY in headless shells — expected).
 9. **Tests:** clean-slate rebuild exit 0 · CLI loop PASS (local + cloud) ·
@@ -90,7 +90,7 @@ git clone https://github.com/NousResearch/hermes-agent.git ~/.hermes/hermes-agen
 curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/hermes-install.sh
 bash /tmp/hermes-install.sh \
   --non-interactive --skip-browser --skip-computer-use   # fails at Node: expected
-python3 ~/hermes-monterey/repin.py                        # apply the 5 patches
+python3 ~/hermes-monterey/repin.py                        # apply the port patches
 sh ~/hermes-monterey/reinstall.sh                         # tools + venv + JS deps
 
 # 5. Point Hermes at Ollama:
@@ -169,7 +169,7 @@ Automatic help already wired:
 - `repin.py` — idempotent, key-based patch applier (`--check` for verify-only)
 - `reinstall.sh` — repin + pm tools + JS deps + doctor hint (one shot)
 - `merge-driver.sh` / `setup-driver.sh` — auto-keep the Node pin across rebases
-- `monterey-intel-port.diff` — frozen record of the original 5-file patch
+- `monterey-intel-port.diff` — frozen record of the port patch
 
 ## Contact
 
