@@ -120,9 +120,16 @@ opt-in), so this is only for manual updates. The installer stashes local changes
 cd ~/.hermes/hermes-agent
 hermes update                                   # or re-run install.sh
 git checkout origin/main -- pm/lock.json package.json package-lock.json \
-  pm/update.py scripts/build/node-deps.mjs .gitattributes  # accept upstream…
+  pm/update.py scripts/build/node-deps.mjs .gitattributes README.md  # accept upstream…
 python3 ~/hermes-monterey/repin.py              # …re-pin by key (immune to version bumps)
 sh ~/hermes-monterey/reinstall.sh               # re-sync tools
+# The checkout above also wipes the fork README banner — re-paste these 5 lines
+# at the very top of README.md (before everything else):
+# > **Monterey (Intel) port — unofficial fork.** Runs on macOS 12 (upstream needs 14+).
+# > Port branch: [`monterey-intel-port`](https://github.com/NoctenKnight/hermes-agent/tree/monterey-intel-port) ·
+# > Docs, rebuild scripts & re-apply kit: [hermes-agent-monterey](https://github.com/NoctenKnight/hermes-agent-monterey).
+# > Everything below is upstream Nous Research documentation.
+# >
 ```
 
 Why not `merge=ours` in `.gitattributes`? It would freeze the ENTIRE lockfile and
@@ -167,7 +174,7 @@ Automatic help already wired:
 - `hermes update` / re-running `install.sh` wipes repo patches (autostash) — use the
   reapply flow above, never `git stash pop` blindly onto a moved main.
 - API keys live in `~/.hermes/.env` (600), outside the repo — safe to commit the
-  6 patched files; never commit `.env`.
+  7 port files (6 pins + README notice); never commit `.env`.
 - Upstream may one day require Node 22+ *APIs* (not just the version gate) or
   Python 3.15-only syntax — then this port needs real code work, not pins.
 
