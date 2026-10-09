@@ -5,8 +5,7 @@ This kit records how it was made to work on an **Intel Mac running macOS 12.7.6*
 and how to keep it working across updates. Nothing here needs `sudo`;
 everything lives in `$HOME`.
 
-Machine this was built on: Monterey 12.7.6, x86_64, 32 GB RAM,
-AMD Radeon R9 M380 2 GB (unusable for inference — CPU-only),
+Machine this was built on: Monterey 12.7.6, x86_64,
 Xcode CLT 14 (clang 14, `xcode-select -p` → `/Library/Developer/CommandLineTools`),
 system Python 3.9.6 (too old — the installer brings its own).
 
