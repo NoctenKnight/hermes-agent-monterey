@@ -5,11 +5,6 @@ This kit records how it was made to work on an **Intel Mac running macOS 12.7.6*
 and how to keep it working across updates. Nothing here needs `sudo`;
 everything lives in `$HOME`.
 
-Machine this was built on: Monterey 12.7.6, x86_64, 32 GB RAM,
-AMD Radeon R9 M380 2 GB (unusable for inference — CPU-only),
-Xcode CLT 14 (clang 14, `xcode-select -p` → `/Library/Developer/CommandLineTools`),
-system Python 3.9.6 (too old — the installer brings its own).
-
 ## Version inventory (verified working)
 
 | Piece | Version | Why this one |
@@ -40,7 +35,8 @@ system Python 3.9.6 (too old — the installer brings its own).
 5. **Rust + OpenSSL** (table above), exported via `~/.zshrc` (step 1 below).
 6. **Context fix.** Hermes rejects models under 64K context (`nous-hermes` = 4K).
    Serve with `OLLAMA_CONTEXT_LENGTH=65536`, use `llama3.1:8b` (KV cache ≈ 8.6 GB +
-   4.9 GB weights ≈ 14 GB loaded — fits 32 GB RAM). First chat answered correctly
+   4.9 GB weights ≈ 14 GB loaded — needs ~16 GB free RAM; pick a smaller
+   64K-capable model if you have less). First chat answered correctly
    (`OLLAMA_OK`, 8m42s on CPU — slow but proven).
 7. **OpenRouter (optional, fast).** Key → `~/.hermes/.env` as `OPENROUTER_API_KEY`
    (600 perms), provider `openrouter`, free model with ≥64K + tools
@@ -62,7 +58,7 @@ system Python 3.9.6 (too old — the installer brings its own).
 
 ## Fresh install on another Monterey Intel Mac (easy path)
 
-Prerequisites: Xcode CLT (`xcode-select --install`), git, curl, ~30 GB free.
+Prerequisites: Xcode CLT (`xcode-select --install`), git, curl, ~30 GB free disk.
 
 ```bash
 # 0. Get this kit:
@@ -141,10 +137,10 @@ Automatic help already wired:
 | `dyld: Symbol not found (__libcpp_verbose_abort)` for `node` | Node 22+ on macOS 12 | Repin to Node v20.19.0 (`repin.py`); never newer on Monterey |
 | `✗ node: staged entry failed verification` during install | Same as above (pm probing the binary) | Same fix |
 | `Error: node 20.19.0 violates ^22…` from `node-deps.mjs` / TUI won't start | Root `engines` gate | `repin.py` relaxes root `package.json` + `package-lock.json`; needs `npm_config_engine_strict=false` too (repo `.npmrc` forces strict; CLI flag in script beats env, hence the `.mjs` patch) |
-| `npm error code EACCES` / weird exit -13, 243 | `~/.npm` owned by root (old sudo run) | `npm_config_cache=$HOME/.npm-user` (in `.zshrc`); don't `chown` without need |
+| `npm error code EACCES` / weird exit -13, 243 | `~/.npm` owned by root (e.g. from an old sudo run — check with `ls -ld ~/.npm`) | `npm_config_cache=$HOME/.npm-user` (in `.zshrc`); don't `chown` without need |
 | `cryptography` build: “Could not find directory of OpenSSL installation” | No system OpenSSL dev files on macOS | Build OpenSSL 3.5.4 to `~/.local`, export `OPENSSL_DIR` + `PKG_CONFIG_PATH` (persisted in `.zshrc`) |
 | `cryptography` still fails to link | Missing Rust or stale env in current shell | Install rustup stable, `source ~/.zshrc`, re-run `reinstall.sh` |
-| `context window 4,096 below minimum 64,000` | Small-context local model | `OLLAMA_CONTEXT_LENGTH=65536 ollama serve` + 64K-native model (`llama3.1:8b`); 7B-class non-GQA models can't do 64K in 32 GB RAM — prefer GQA models (Qwen/Llama-3) |
+| `context window 4,096 below minimum 64,000` | Small-context local model | `OLLAMA_CONTEXT_LENGTH=65536 ollama serve` + 64K-native model (`llama3.1:8b`); 7B-class non-GQA models need tens of GB of RAM for a 64K KV cache — prefer GQA models (Qwen/Llama-3) |
 | `HTTP 429` on OpenRouter free model | Per-model free-tier rate limits (key itself was valid) | Wait a minute or switch free model (`nemotron-3-super-120b-a12b:free` worked); `hermes fallback add` for a backup |
 | Requests still hit localhost after switching provider | Stale `model.base_url` outranks provider | `hermes config unset model.base_url` (Hermes warns about this itself) |
 | `hermes: command not found` | `~/.local/bin` not on PATH (installer skips rc edit non-interactively) | The `case ":$PATH:"…` line in `.zshrc` above; open a new terminal |
@@ -152,7 +148,7 @@ Automatic help already wired:
 | TUI exits instantly / blank in headless shell | Ink needs a real TTY | Run `hermes --tui` in a normal terminal; not a port bug |
 | `git diff` on `pm/lock.json` explodes to 1300 lines | `json.dump` with wrong indent | File uses 2-space indent + trailing `\n` — `repin.py` preserves both |
 | First chat takes ~9 min, then faster | 8B model on CPU + ~11K-token agent system prompt | Expected on Intel; keep model loaded, or use a cloud model for interactive work |
-| GPU questions | Ollama x86 is CPU-only upstream; 2 GB VRAM couldn't hold the model anyway; old Metal family | No GPU path on this machine — CPU or cloud |
+| GPU questions | Ollama x86 is CPU-only upstream; older/integrated Mac GPUs can't hold multi-GB models and lack modern Metal | No GPU path on Intel Macs — CPU or cloud |
 
 ## Known limitations
 
